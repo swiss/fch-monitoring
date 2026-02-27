@@ -1,0 +1,17 @@
+<Project>
+    <!-- Packaging -->
+    <PropertyGroup>
+        <IncludeSymbols>true</IncludeSymbols>
+        <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+        <EmbedUntrackedSources>true</EmbedUntrackedSources>
+        <Authors>DevOps Team Federal Chancellery</Authors>
+        <PackageLicenseExpression>MIT</PackageLicenseExpression>
+        <PackageId>Swiss.FCh.Monitoring</PackageId>
+    </PropertyGroup>
+
+    <!-- Code Analysis -->
+    <PropertyGroup>
+        <AnalysisLevel>latest-ALL</AnalysisLevel>
+        <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    </PropertyGroup>
+</Project>

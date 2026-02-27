@@ -1,0 +1,44 @@
+name: Build and Publish to NuGet.org
+
+permissions:
+  contents: read
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build_and_publish:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Source Code
+      uses: actions/checkout@v5
+
+    - name: Get latest git tag as version
+      id: get_version
+      run: |
+        TAG=$(git describe --tags --abbrev=0)
+        VERSION=${TAG#v}  # Strip leading 'v' if present
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v5
+      with:
+        dotnet-version: 8.0.x
+
+    - name: dotnet restore
+      run: dotnet restore src/Swiss.FCh.Monitoring.sln
+
+    - name: dotnet build
+      run: dotnet build src/Swiss.FCh.Monitoring.sln --configuration Release --no-restore
+
+    - name: dotnet test
+      run: dotnet test src/Swiss.FCh.Monitoring.sln --configuration Release --no-build --verbosity normal
+
+    - name: dotnet pack
+      run: dotnet pack src/Swiss.FCh.Monitoring/Swiss.FCh.Monitoring.csproj --configuration Release --no-build -o ./nupkgs /p:Version=${{ steps.get_version.outputs.version }}
+
+    - name: dotnet nuget push
+      run: dotnet nuget push ./nupkgs/*.nupkg --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json
+

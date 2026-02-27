@@ -1,0 +1,266 @@
+using Swiss.FCh.Monitoring.HealthChecks;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Newtonsoft.Json.Linq;
+
+namespace Swiss.FCh.Monitoring.Tests.HealthChecks;
+
+[TestFixture]
+internal sealed class HealthCheckResponseWriterTests
+{
+    [Test]
+    public async Task WriteResponse_ShouldReturnHealthyReport_WhenHealthReportIsHealthy()
+    {
+        var healthReport = new HealthReport(
+            new Dictionary<string, HealthReportEntry>
+            {
+                {
+                    "Storage grid service",
+                    new HealthReportEntry(
+                        status: HealthStatus.Healthy,
+                        description: "Storage grid service is healthy",
+                        exception: null,
+                        duration: TimeSpan.Zero,
+                        data: new Dictionary<string, object>())
+                },
+                {
+                    "postgres db",
+                    new HealthReportEntry(
+                        status: HealthStatus.Healthy,
+                        description: "Connection to database with EF context successful.",
+                        exception: null,
+                        duration: TimeSpan.Zero,
+                        data: new Dictionary<string, object>())
+                }
+            },
+            totalDuration: TimeSpan.FromSeconds(1));
+
+        var context = new DefaultHttpContext { Response = { Body = new MemoryStream() } };
+
+        await HealthCheckResponseWriter.WriteResponse(context, healthReport);
+
+        context.Response.Body.Seek(0, SeekOrigin.Begin);
+        var jsonResponse = await new StreamReader(context.Response.Body).ReadToEndAsync();
+
+        var jsonObject = JObject.Parse(jsonResponse);
+        Assert.That(jsonObject["status"], Is.Not.Null);
+
+        var results = jsonObject["results"] as JObject;
+        Assert.That(results, Is.Not.Null);
+        Assert.Multiple(() =>
+        {
+            Assert.That(results["Storage grid service"], Is.Not.Null);
+            Assert.That(results["postgres db"], Is.Not.Null);
+        });
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(jsonObject["status"].ToString(), Is.EqualTo("Healthy"));
+            Assert.That(results["Storage grid service"]["status"]?.ToString(), Is.EqualTo("Healthy"));
+            Assert.That(results["Storage grid service"]["description"]?.ToString(), Is.EqualTo("Storage grid service is healthy"));
+            Assert.That(results["postgres db"]["status"]?.ToString(), Is.EqualTo("Healthy"));
+            Assert.That(results["postgres db"]["description"]?.ToString(), Is.EqualTo("Connection to database with EF context successful."));
+        });
+    }
+
+    [Test]
+    public async Task WriteResponse_ShouldReturnUnhealthyReport_WhenHealthReportHasUnhealthyEntry()
+    {
+        var healthReport = new HealthReport(
+            new Dictionary<string, HealthReportEntry>
+            {
+                {
+                    "Storage grid service",
+                    new HealthReportEntry(
+                        status: HealthStatus.Unhealthy,
+                        description: "Storage grid service is not reachable",
+                        exception: null,
+                        duration: TimeSpan.Zero,
+                        data: new Dictionary<string, object>())
+                }
+            },
+            totalDuration: TimeSpan.FromSeconds(1));
+
+        var context = new DefaultHttpContext { Response = { Body = new MemoryStream() } };
+
+        await HealthCheckResponseWriter.WriteResponse(context, healthReport);
+
+        context.Response.Body.Seek(0, SeekOrigin.Begin);
+        var jsonResponse = await new StreamReader(context.Response.Body).ReadToEndAsync();
+        var jsonObject = JObject.Parse(jsonResponse);
+
+        Assert.That(jsonObject["status"], Is.Not.Null);
+        var results = jsonObject["results"] as JObject;
+
+        Assert.That(results, Is.Not.Null);
+        Assert.That(results["Storage grid service"], Is.Not.Null);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(jsonObject["status"].ToString(), Is.EqualTo("Unhealthy"));
+            Assert.That(results["Storage grid service"]["status"]?.ToString(), Is.EqualTo("Unhealthy"));
+            Assert.That(results["Storage grid service"]["description"]?.ToString(), Is.EqualTo("Storage grid service is not reachable"));
+        });
+    }
+
+    [Test]
+    public async Task WriteResponse_ShouldReturnDegradedReport_WhenHealthReportHasDegradedEntry()
+    {
+        var healthReport = new HealthReport(
+            new Dictionary<string, HealthReportEntry>
+            {
+                {
+                    "Some External Service",
+                    new HealthReportEntry(
+                        status: HealthStatus.Degraded,
+                        description: "Response is slower than expected",
+                        exception: null,
+                        duration: TimeSpan.FromMilliseconds(500),
+                        data: new Dictionary<string, object>())
+                }
+            },
+            totalDuration: TimeSpan.FromSeconds(1));
+
+        var context = new DefaultHttpContext { Response = { Body = new MemoryStream() } };
+
+        await HealthCheckResponseWriter.WriteResponse(context, healthReport);
+
+        context.Response.Body.Seek(0, SeekOrigin.Begin);
+        var jsonResponse = await new StreamReader(context.Response.Body).ReadToEndAsync();
+
+        var jsonObject = JObject.Parse(jsonResponse);
+        Assert.That(jsonObject["status"], Is.Not.Null);
+
+        var results = jsonObject["results"] as JObject;
+        Assert.That(results, Is.Not.Null);
+        Assert.That(results["Some External Service"], Is.Not.Null);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(jsonObject["status"].ToString(), Is.EqualTo("Degraded"));
+            Assert.That(results["Some External Service"]["status"]?.ToString(), Is.EqualTo("Degraded"));
+            Assert.That(results["Some External Service"]["description"]?.ToString(), Is.EqualTo("Response is slower than expected"));
+        });
+    }
+
+    [Test]
+    public async Task WriteResponse_ShouldIncludeData_WhenHealthReportEntryHasData()
+    {
+        var healthReportEntryData = new Dictionary<string, object>
+        {
+            { "Latency", 120 },
+            { "Endpoint", "https://example.com/api/health" }
+        };
+
+        var healthReport = new HealthReport(
+            new Dictionary<string, HealthReportEntry>
+            {
+                {
+                    "External API",
+                    new HealthReportEntry(
+                        status: HealthStatus.Healthy,
+                        description: "API responded with status 200 OK",
+                        exception: null,
+                        duration: TimeSpan.FromMilliseconds(120),
+                        data: healthReportEntryData)
+                }
+            },
+            totalDuration: TimeSpan.FromSeconds(1));
+
+        var context = new DefaultHttpContext { Response = { Body = new MemoryStream() } };
+
+        await HealthCheckResponseWriter.WriteResponse(context, healthReport);
+
+        context.Response.Body.Seek(0, SeekOrigin.Begin);
+        var jsonResponse = await new StreamReader(context.Response.Body).ReadToEndAsync();
+        var jsonObject = JObject.Parse(jsonResponse);
+
+        var results = jsonObject["results"] as JObject;
+        Assert.That(results, Is.Not.Null);
+        Assert.That(results["External API"], Is.Not.Null);
+
+        var data = results["External API"]["data"] as JObject;
+        Assert.That(data, Is.Not.Null);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(data["Latency"], Is.Not.Null);
+            Assert.That(data["Endpoint"], Is.Not.Null);
+        });
+        Assert.Multiple(() =>
+        {
+            Assert.That(data["Latency"].ToObject<int>(), Is.EqualTo(120));
+            Assert.That(data["Endpoint"].ToString(), Is.EqualTo("https://example.com/api/health"));
+        });
+    }
+
+    [Test]
+    public async Task WriteResponse_ShouldIncludeException_WhenHealthReportEntryHasException()
+    {
+        const string exceptionMessage = "Something went wrong!";
+        var healthReport = new HealthReport(
+            new Dictionary<string, HealthReportEntry>
+            {
+                {
+                    "Faulty service",
+                    new HealthReportEntry(
+                        status: HealthStatus.Unhealthy,
+                        description: "An exception occurred.",
+                        exception: new InvalidOperationException(exceptionMessage),
+                        duration: TimeSpan.Zero,
+                        data: new Dictionary<string, object>())
+                }
+            },
+            totalDuration: TimeSpan.FromSeconds(1));
+
+        var context = new DefaultHttpContext { Response = { Body = new MemoryStream() } };
+
+        await HealthCheckResponseWriter.WriteResponse(context, healthReport);
+
+        context.Response.Body.Seek(0, SeekOrigin.Begin);
+        var jsonResponse = await new StreamReader(context.Response.Body).ReadToEndAsync();
+
+        var jsonObject = JObject.Parse(jsonResponse);
+        Assert.That(jsonObject["status"], Is.Not.Null);
+
+        var results = jsonObject["results"] as JObject;
+        Assert.That(results, Is.Not.Null);
+        Assert.That(results["Faulty service"], Is.Not.Null);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(results["Faulty service"]["exception"], Is.Not.Null);
+            Assert.That(results["Faulty service"]["exception"]?.ToString(), Is.EqualTo(exceptionMessage));
+        });
+    }
+
+    [Test]
+    public async Task WriteResponse_ShouldReturnJsonContentType()
+    {
+        var healthReport = new HealthReport(new Dictionary<string, HealthReportEntry>(), TimeSpan.Zero);
+        var context = new DefaultHttpContext { Response = { Body = new MemoryStream() } };
+
+        await HealthCheckResponseWriter.WriteResponse(context, healthReport);
+
+        Assert.That(context.Response.ContentType, Is.EqualTo("application/json; charset=utf-8"));
+    }
+
+    [Test]
+    public async Task WriteResponse_ShouldReturnEmptyResults_WhenNoEntriesAreProvided()
+    {
+        var healthReport = new HealthReport(new Dictionary<string, HealthReportEntry>(), TimeSpan.Zero);
+        var context = new DefaultHttpContext { Response = { Body = new MemoryStream() } };
+
+        await HealthCheckResponseWriter.WriteResponse(context, healthReport);
+
+        context.Response.Body.Seek(0, SeekOrigin.Begin);
+        var jsonResponse = await new StreamReader(context.Response.Body).ReadToEndAsync();
+
+        var jsonObject = JObject.Parse(jsonResponse);
+        Assert.That(jsonObject["status"], Is.Not.Null);
+        Assert.That(jsonObject["status"].ToString(), Is.EqualTo("Healthy"));
+
+        var results = jsonObject["results"] as JObject;
+        Assert.That(results, Is.Null);
+    }
+}

@@ -1,0 +1,47 @@
+name: Update THIRD_PARTY_LICENSES
+
+on:
+  push:
+    branches-ignore:
+      - main  # don't trigger on main
+    paths:
+      - '**/*.csproj' # only trigger, if the a project file, has been changed
+
+permissions:
+  contents: write  # needed to push the updated file
+
+jobs:
+  update-third-party-licenses:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # required for pushing changes
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '7.0.x'
+
+      - name: Install dotnet tool
+        run: dotnet tool install -g dotnet-project-licenses
+
+      - name: Generate THIRD_PARTY_LICENSES.md
+        run: dotnet-project-licenses --input . --md --outfile THIRD_PARTY_LICENSES.md
+
+      - name: Commit and push THIRD_PARTY_LICENSES.md
+        run: |
+          if git diff --quiet -- THIRD_PARTY_LICENSES.md; then
+            echo "No changes to THIRD_PARTY_LICENSES.md"
+            exit 0
+          fi
+          
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          git add THIRD_PARTY_LICENSES.md
+          git commit -m "chore: update THIRD_PARTY_LICENSES.md"
+          
+          git push origin HEAD
