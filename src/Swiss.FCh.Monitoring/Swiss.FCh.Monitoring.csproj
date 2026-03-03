@@ -6,7 +6,16 @@
         <Nullable>enable</Nullable>
     </PropertyGroup>
 
-    <!-- Packaging -->
+    <PropertyGroup>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <None Include="../../README.md" Pack="true" PackagePath="README.md">
+            <Link>README.md</Link>
+        </None>
+    </ItemGroup>
+
     <PropertyGroup>
         <IncludeSymbols>true</IncludeSymbols>
         <SymbolPackageFormat>snupkg</SymbolPackageFormat>
