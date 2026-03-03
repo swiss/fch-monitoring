@@ -6,6 +6,16 @@
         <Nullable>enable</Nullable>
     </PropertyGroup>
 
+    <!-- Packaging -->
+    <PropertyGroup>
+        <IncludeSymbols>true</IncludeSymbols>
+        <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+        <EmbedUntrackedSources>true</EmbedUntrackedSources>
+        <Authors>DevOps Team Federal Chancellery</Authors>
+        <PackageLicenseExpression>MIT</PackageLicenseExpression>
+        <PackageId>Swiss.FCh.Monitoring</PackageId>
+    </PropertyGroup>
+
     <ItemGroup>
         <FrameworkReference Include="Microsoft.AspNetCore.App"/>
     </ItemGroup>
