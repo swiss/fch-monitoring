@@ -9,7 +9,7 @@ The latest NuGet package is published at https://www.nuget.org/packages/Swiss.FC
 
 The health checks can be configured in your ```Program.cs```.
 
-```
+```csharp
 using Swiss.FCh.Monitoring.Extensions;
 
 [...]
