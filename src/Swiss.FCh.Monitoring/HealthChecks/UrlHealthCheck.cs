@@ -22,7 +22,7 @@ public class UrlHealthCheck : IHealthCheck
         try
         {
             var client = _httpClientFactory.CreateClient(_httpClientName ?? context.Registration.Name);
-            var response = await client.GetAsync(_url, cancellationToken);
+            var response = await client.GetAsync(_url, cancellationToken).ConfigureAwait(false);
 
             return response.IsSuccessStatusCode
                 ? HealthCheckResult.Healthy("Endpoint is reachable.")

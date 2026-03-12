@@ -40,6 +40,6 @@ public static class HealthCheckResponseWriter
         };
 
         var json = JsonSerializer.Serialize(response, _jsonSerializerOptions);
-        await context.Response.WriteAsync(json, Encoding.UTF8);
+        await context.Response.WriteAsync(json, Encoding.UTF8).ConfigureAwait(false);
     }
 }

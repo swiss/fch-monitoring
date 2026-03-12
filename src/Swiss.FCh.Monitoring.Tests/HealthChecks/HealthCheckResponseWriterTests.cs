@@ -37,10 +37,11 @@ internal sealed class HealthCheckResponseWriterTests
 
         var context = new DefaultHttpContext { Response = { Body = new MemoryStream() } };
 
-        await HealthCheckResponseWriter.WriteResponse(context, healthReport);
+        await HealthCheckResponseWriter.WriteResponse(context, healthReport).ConfigureAwait(false);
 
         context.Response.Body.Seek(0, SeekOrigin.Begin);
-        var jsonResponse = await new StreamReader(context.Response.Body).ReadToEndAsync();
+        var reader = new StreamReader(context.Response.Body);
+        var jsonResponse = await reader.ReadToEndAsync().ConfigureAwait(false);
 
         var jsonObject = JObject.Parse(jsonResponse);
         Assert.That(jsonObject["status"], Is.Not.Null);
@@ -61,6 +62,8 @@ internal sealed class HealthCheckResponseWriterTests
             Assert.That(results["postgres db"]["status"]?.ToString(), Is.EqualTo("Healthy"));
             Assert.That(results["postgres db"]["description"]?.ToString(), Is.EqualTo("Connection to database with EF context successful."));
         });
+
+        reader.Dispose();
     }
 
     [Test]
@@ -83,10 +86,11 @@ internal sealed class HealthCheckResponseWriterTests
 
         var context = new DefaultHttpContext { Response = { Body = new MemoryStream() } };
 
-        await HealthCheckResponseWriter.WriteResponse(context, healthReport);
+        await HealthCheckResponseWriter.WriteResponse(context, healthReport).ConfigureAwait(false);
 
         context.Response.Body.Seek(0, SeekOrigin.Begin);
-        var jsonResponse = await new StreamReader(context.Response.Body).ReadToEndAsync();
+        var reader = new StreamReader(context.Response.Body);
+        var jsonResponse = await reader.ReadToEndAsync().ConfigureAwait(false);
         var jsonObject = JObject.Parse(jsonResponse);
 
         Assert.That(jsonObject["status"], Is.Not.Null);
@@ -101,6 +105,8 @@ internal sealed class HealthCheckResponseWriterTests
             Assert.That(results["Storage grid service"]["status"]?.ToString(), Is.EqualTo("Unhealthy"));
             Assert.That(results["Storage grid service"]["description"]?.ToString(), Is.EqualTo("Storage grid service is not reachable"));
         });
+
+        reader.Dispose();
     }
 
     [Test]
@@ -123,10 +129,11 @@ internal sealed class HealthCheckResponseWriterTests
 
         var context = new DefaultHttpContext { Response = { Body = new MemoryStream() } };
 
-        await HealthCheckResponseWriter.WriteResponse(context, healthReport);
+        await HealthCheckResponseWriter.WriteResponse(context, healthReport).ConfigureAwait(false);
 
         context.Response.Body.Seek(0, SeekOrigin.Begin);
-        var jsonResponse = await new StreamReader(context.Response.Body).ReadToEndAsync();
+        var reader = new StreamReader(context.Response.Body);
+        var jsonResponse = await reader.ReadToEndAsync().ConfigureAwait(false);
 
         var jsonObject = JObject.Parse(jsonResponse);
         Assert.That(jsonObject["status"], Is.Not.Null);
@@ -141,6 +148,8 @@ internal sealed class HealthCheckResponseWriterTests
             Assert.That(results["Some External Service"]["status"]?.ToString(), Is.EqualTo("Degraded"));
             Assert.That(results["Some External Service"]["description"]?.ToString(), Is.EqualTo("Response is slower than expected"));
         });
+
+        reader.Dispose();
     }
 
     [Test]
@@ -169,10 +178,11 @@ internal sealed class HealthCheckResponseWriterTests
 
         var context = new DefaultHttpContext { Response = { Body = new MemoryStream() } };
 
-        await HealthCheckResponseWriter.WriteResponse(context, healthReport);
+        await HealthCheckResponseWriter.WriteResponse(context, healthReport).ConfigureAwait(false);
 
         context.Response.Body.Seek(0, SeekOrigin.Begin);
-        var jsonResponse = await new StreamReader(context.Response.Body).ReadToEndAsync();
+        var reader = new StreamReader(context.Response.Body);
+        var jsonResponse = await reader.ReadToEndAsync().ConfigureAwait(false);
         var jsonObject = JObject.Parse(jsonResponse);
 
         var results = jsonObject["results"] as JObject;
@@ -192,6 +202,8 @@ internal sealed class HealthCheckResponseWriterTests
             Assert.That(data["Latency"].ToObject<int>(), Is.EqualTo(120));
             Assert.That(data["Endpoint"].ToString(), Is.EqualTo("https://example.com/api/health"));
         });
+
+        reader.Dispose();
     }
 
     [Test]
@@ -215,10 +227,11 @@ internal sealed class HealthCheckResponseWriterTests
 
         var context = new DefaultHttpContext { Response = { Body = new MemoryStream() } };
 
-        await HealthCheckResponseWriter.WriteResponse(context, healthReport);
+        await HealthCheckResponseWriter.WriteResponse(context, healthReport).ConfigureAwait(false);
 
         context.Response.Body.Seek(0, SeekOrigin.Begin);
-        var jsonResponse = await new StreamReader(context.Response.Body).ReadToEndAsync();
+        var reader = new StreamReader(context.Response.Body);
+        var jsonResponse = await reader.ReadToEndAsync().ConfigureAwait(false);
 
         var jsonObject = JObject.Parse(jsonResponse);
         Assert.That(jsonObject["status"], Is.Not.Null);
@@ -232,6 +245,8 @@ internal sealed class HealthCheckResponseWriterTests
             Assert.That(results["Faulty service"]["exception"], Is.Not.Null);
             Assert.That(results["Faulty service"]["exception"]?.ToString(), Is.EqualTo(exceptionMessage));
         });
+
+        reader.Dispose();
     }
 
     [Test]
@@ -240,7 +255,7 @@ internal sealed class HealthCheckResponseWriterTests
         var healthReport = new HealthReport(new Dictionary<string, HealthReportEntry>(), TimeSpan.Zero);
         var context = new DefaultHttpContext { Response = { Body = new MemoryStream() } };
 
-        await HealthCheckResponseWriter.WriteResponse(context, healthReport);
+        await HealthCheckResponseWriter.WriteResponse(context, healthReport).ConfigureAwait(false);
 
         Assert.That(context.Response.ContentType, Is.EqualTo("application/json; charset=utf-8"));
     }
@@ -251,10 +266,11 @@ internal sealed class HealthCheckResponseWriterTests
         var healthReport = new HealthReport(new Dictionary<string, HealthReportEntry>(), TimeSpan.Zero);
         var context = new DefaultHttpContext { Response = { Body = new MemoryStream() } };
 
-        await HealthCheckResponseWriter.WriteResponse(context, healthReport);
+        await HealthCheckResponseWriter.WriteResponse(context, healthReport).ConfigureAwait(false);
 
         context.Response.Body.Seek(0, SeekOrigin.Begin);
-        var jsonResponse = await new StreamReader(context.Response.Body).ReadToEndAsync();
+        var reader = new StreamReader(context.Response.Body);
+        var jsonResponse = await reader.ReadToEndAsync().ConfigureAwait(false);
 
         var jsonObject = JObject.Parse(jsonResponse);
         Assert.That(jsonObject["status"], Is.Not.Null);
@@ -262,5 +278,7 @@ internal sealed class HealthCheckResponseWriterTests
 
         var results = jsonObject["results"] as JObject;
         Assert.That(results, Is.Null);
+
+        reader.Dispose();
     }
 }

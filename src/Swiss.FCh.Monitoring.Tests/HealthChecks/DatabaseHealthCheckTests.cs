@@ -41,7 +41,7 @@ internal sealed class DatabaseHealthCheckTests
         _databaseFacade.CanConnectAsync(Arg.Any<CancellationToken>()).Returns(Task.FromResult(true));
         var context = new HealthCheckContext();
 
-        var result = await _healthCheck.CheckHealthAsync(context, CancellationToken.None);
+        var result = await _healthCheck.CheckHealthAsync(context, CancellationToken.None).ConfigureAwait(false);
 
         Assert.Multiple(() =>
         {
@@ -58,7 +58,7 @@ internal sealed class DatabaseHealthCheckTests
         _databaseFacade.CanConnectAsync(Arg.Any<CancellationToken>()).Returns(Task.FromResult(false));
         var context = new HealthCheckContext();
 
-        var result = await _healthCheck.CheckHealthAsync(context, CancellationToken.None);
+        var result = await _healthCheck.CheckHealthAsync(context, CancellationToken.None).ConfigureAwait(false);
 
         Assert.Multiple(() =>
         {
@@ -76,7 +76,7 @@ internal sealed class DatabaseHealthCheckTests
         _databaseFacade.CanConnectAsync(Arg.Any<CancellationToken>()).Returns<Task<bool>>(_ => throw exception);
         var context = new HealthCheckContext();
 
-        var result = await _healthCheck.CheckHealthAsync(context, CancellationToken.None);
+        var result = await _healthCheck.CheckHealthAsync(context, CancellationToken.None).ConfigureAwait(false);
 
         Assert.Multiple(() =>
         {

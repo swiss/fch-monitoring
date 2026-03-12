@@ -10,12 +10,22 @@ internal sealed class UrlHealthCheckTests
 {
     private readonly IHttpClientFactory _httpClientFactory = Substitute.For<IHttpClientFactory>();
 
+    private HttpClient? _httpClient;
+    private MockHttpMessageHandler? _httpMessageHandler;
+
+    [TearDown]
+    public void TearDown()
+    {
+        _httpClient?.Dispose();
+        _httpMessageHandler?.Dispose();
+    }
+
     [Test]
     public async Task CheckHealthAsync_ShouldReturnHealthy_WhenEndpointIsReachable()
     {
         var (healthCheck, context) = CreateUrlHealthCheck(HttpStatusCode.OK);
 
-        var result = await healthCheck.CheckHealthAsync(context, CancellationToken.None);
+        var result = await healthCheck.CheckHealthAsync(context, CancellationToken.None).ConfigureAwait(false);
 
         Assert.Multiple(() =>
         {
@@ -30,7 +40,7 @@ internal sealed class UrlHealthCheckTests
     {
         var (healthCheck, context) = CreateUrlHealthCheck(HttpStatusCode.InternalServerError);
 
-        var result = await healthCheck.CheckHealthAsync(context, CancellationToken.None);
+        var result = await healthCheck.CheckHealthAsync(context, CancellationToken.None).ConfigureAwait(false);
 
         Assert.Multiple(() =>
         {
@@ -45,7 +55,7 @@ internal sealed class UrlHealthCheckTests
     {
         var (healthCheck, context) = CreateUrlHealthCheck(HttpStatusCode.InternalServerError, HealthStatus.Degraded);
 
-        var result = await healthCheck.CheckHealthAsync(context, CancellationToken.None);
+        var result = await healthCheck.CheckHealthAsync(context, CancellationToken.None).ConfigureAwait(false);
 
         Assert.Multiple(() =>
         {
@@ -60,7 +70,7 @@ internal sealed class UrlHealthCheckTests
     {
         var (healthCheck, context) = CreateUrlHealthCheck(null);
 
-        var result = await healthCheck.CheckHealthAsync(context, CancellationToken.None);
+        var result = await healthCheck.CheckHealthAsync(context, CancellationToken.None).ConfigureAwait(false);
 
         Assert.Multiple(() =>
         {
@@ -75,7 +85,7 @@ internal sealed class UrlHealthCheckTests
     {
         var (healthCheck, context) = CreateUrlHealthCheck(null, HealthStatus.Degraded);
 
-        var result = await healthCheck.CheckHealthAsync(context, CancellationToken.None);
+        var result = await healthCheck.CheckHealthAsync(context, CancellationToken.None).ConfigureAwait(false);
 
         Assert.Multiple(() =>
         {
@@ -95,6 +105,9 @@ internal sealed class UrlHealthCheckTests
         var urlHealthCheck = new UrlHealthCheck(_httpClientFactory, "https://example.com/api/xyz");
         var healthCheckContext = new HealthCheckContext
             { Registration = new HealthCheckRegistration("UrlHealthCheck", urlHealthCheck, failureStatus, null) };
+
+        _httpClient = httpClient;
+        _httpMessageHandler = mockHttpMessageHandler;
 
         return (urlHealthCheck, healthCheckContext);
     }
