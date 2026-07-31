@@ -1,5 +1,9 @@
 # Changelog
 
+## v2.5.4
+- Exception details removed from published system status (avoids leaking information that might be used to find vulnerabilities)
+- NuGet dependencies updated
+
 ## v2.5.3
 Targeting of multiple dotnet versions corrected
 

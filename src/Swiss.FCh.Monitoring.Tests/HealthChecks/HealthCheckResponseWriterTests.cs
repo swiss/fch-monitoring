@@ -1,7 +1,7 @@
+using System.Text.Json;
 using Swiss.FCh.Monitoring.HealthChecks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
-using Newtonsoft.Json.Linq;
 
 namespace Swiss.FCh.Monitoring.Tests.HealthChecks;
 
@@ -43,24 +43,15 @@ internal sealed class HealthCheckResponseWriterTests
         var reader = new StreamReader(context.Response.Body);
         var jsonResponse = await reader.ReadToEndAsync().ConfigureAwait(false);
 
-        var jsonObject = JObject.Parse(jsonResponse);
-        Assert.That(jsonObject["status"], Is.Not.Null);
-
-        var results = jsonObject["results"] as JObject;
-        Assert.That(results, Is.Not.Null);
-        Assert.Multiple(() =>
-        {
-            Assert.That(results["Storage grid service"], Is.Not.Null);
-            Assert.That(results["postgres db"], Is.Not.Null);
-        });
+        var jsonObject = JsonDocument.Parse(jsonResponse).RootElement;
 
         Assert.Multiple(() =>
         {
-            Assert.That(jsonObject["status"].ToString(), Is.EqualTo("Healthy"));
-            Assert.That(results["Storage grid service"]["status"]?.ToString(), Is.EqualTo("Healthy"));
-            Assert.That(results["Storage grid service"]["description"]?.ToString(), Is.EqualTo("Storage grid service is healthy"));
-            Assert.That(results["postgres db"]["status"]?.ToString(), Is.EqualTo("Healthy"));
-            Assert.That(results["postgres db"]["description"]?.ToString(), Is.EqualTo("Connection to database with EF context successful."));
+            Assert.That(jsonObject.GetProperty("status").GetString(), Is.EqualTo("Healthy"));
+            Assert.That(jsonObject.GetProperty("results").GetProperty("Storage grid service").GetProperty("status").GetString(), Is.EqualTo("Healthy"));
+            Assert.That(jsonObject.GetProperty("results").GetProperty("Storage grid service").GetProperty("description").GetString(), Is.EqualTo("Storage grid service is healthy"));
+            Assert.That(jsonObject.GetProperty("results").GetProperty("postgres db").GetProperty("status").GetString(), Is.EqualTo("Healthy"));
+            Assert.That(jsonObject.GetProperty("results").GetProperty("postgres db").GetProperty("description").GetString(), Is.EqualTo("Connection to database with EF context successful."));
         });
 
         reader.Dispose();
@@ -91,19 +82,13 @@ internal sealed class HealthCheckResponseWriterTests
         context.Response.Body.Seek(0, SeekOrigin.Begin);
         var reader = new StreamReader(context.Response.Body);
         var jsonResponse = await reader.ReadToEndAsync().ConfigureAwait(false);
-        var jsonObject = JObject.Parse(jsonResponse);
-
-        Assert.That(jsonObject["status"], Is.Not.Null);
-        var results = jsonObject["results"] as JObject;
-
-        Assert.That(results, Is.Not.Null);
-        Assert.That(results["Storage grid service"], Is.Not.Null);
+        var jsonObject = JsonDocument.Parse(jsonResponse).RootElement;
 
         Assert.Multiple(() =>
         {
-            Assert.That(jsonObject["status"].ToString(), Is.EqualTo("Unhealthy"));
-            Assert.That(results["Storage grid service"]["status"]?.ToString(), Is.EqualTo("Unhealthy"));
-            Assert.That(results["Storage grid service"]["description"]?.ToString(), Is.EqualTo("Storage grid service is not reachable"));
+            Assert.That(jsonObject.GetProperty("status").GetString(), Is.EqualTo("Unhealthy"));
+            Assert.That(jsonObject.GetProperty("results").GetProperty("Storage grid service").GetProperty("status").GetString(), Is.EqualTo("Unhealthy"));
+            Assert.That(jsonObject.GetProperty("results").GetProperty("Storage grid service").GetProperty("description").GetString(), Is.EqualTo("Storage grid service is not reachable"));
         });
 
         reader.Dispose();
@@ -135,18 +120,13 @@ internal sealed class HealthCheckResponseWriterTests
         var reader = new StreamReader(context.Response.Body);
         var jsonResponse = await reader.ReadToEndAsync().ConfigureAwait(false);
 
-        var jsonObject = JObject.Parse(jsonResponse);
-        Assert.That(jsonObject["status"], Is.Not.Null);
-
-        var results = jsonObject["results"] as JObject;
-        Assert.That(results, Is.Not.Null);
-        Assert.That(results["Some External Service"], Is.Not.Null);
+        var jsonObject = JsonDocument.Parse(jsonResponse).RootElement;
 
         Assert.Multiple(() =>
         {
-            Assert.That(jsonObject["status"].ToString(), Is.EqualTo("Degraded"));
-            Assert.That(results["Some External Service"]["status"]?.ToString(), Is.EqualTo("Degraded"));
-            Assert.That(results["Some External Service"]["description"]?.ToString(), Is.EqualTo("Response is slower than expected"));
+            Assert.That(jsonObject.GetProperty("status").GetString(), Is.EqualTo("Degraded"));
+            Assert.That(jsonObject.GetProperty("results").GetProperty("Some External Service").GetProperty("status").GetString(), Is.EqualTo("Degraded"));
+            Assert.That(jsonObject.GetProperty("results").GetProperty("Some External Service").GetProperty("description").GetString(), Is.EqualTo("Response is slower than expected"));
         });
 
         reader.Dispose();
@@ -183,31 +163,19 @@ internal sealed class HealthCheckResponseWriterTests
         context.Response.Body.Seek(0, SeekOrigin.Begin);
         var reader = new StreamReader(context.Response.Body);
         var jsonResponse = await reader.ReadToEndAsync().ConfigureAwait(false);
-        var jsonObject = JObject.Parse(jsonResponse);
-
-        var results = jsonObject["results"] as JObject;
-        Assert.That(results, Is.Not.Null);
-        Assert.That(results["External API"], Is.Not.Null);
-
-        var data = results["External API"]["data"] as JObject;
-        Assert.That(data, Is.Not.Null);
+        var jsonObject = JsonDocument.Parse(jsonResponse).RootElement;
 
         Assert.Multiple(() =>
         {
-            Assert.That(data["Latency"], Is.Not.Null);
-            Assert.That(data["Endpoint"], Is.Not.Null);
-        });
-        Assert.Multiple(() =>
-        {
-            Assert.That(data["Latency"].ToObject<int>(), Is.EqualTo(120));
-            Assert.That(data["Endpoint"].ToString(), Is.EqualTo("https://example.com/api/health"));
+            Assert.That(jsonObject.GetProperty("results").GetProperty("External API").GetProperty("data").GetProperty("Latency").GetInt32(), Is.EqualTo(120));
+            Assert.That(jsonObject.GetProperty("results").GetProperty("External API").GetProperty("data").GetProperty("Endpoint").GetString(), Is.EqualTo("https://example.com/api/health"));
         });
 
         reader.Dispose();
     }
 
     [Test]
-    public async Task WriteResponse_ShouldIncludeException_WhenHealthReportEntryHasException()
+    public async Task WriteResponse_WhenHealthReportEntryHasException_ShouldNotIncludeException()
     {
         const string exceptionMessage = "Something went wrong!";
         var healthReport = new HealthReport(
@@ -233,17 +201,11 @@ internal sealed class HealthCheckResponseWriterTests
         var reader = new StreamReader(context.Response.Body);
         var jsonResponse = await reader.ReadToEndAsync().ConfigureAwait(false);
 
-        var jsonObject = JObject.Parse(jsonResponse);
-        Assert.That(jsonObject["status"], Is.Not.Null);
-
-        var results = jsonObject["results"] as JObject;
-        Assert.That(results, Is.Not.Null);
-        Assert.That(results["Faulty service"], Is.Not.Null);
+        var jsonObject = JsonDocument.Parse(jsonResponse).RootElement;
 
         Assert.Multiple(() =>
         {
-            Assert.That(results["Faulty service"]["exception"], Is.Not.Null);
-            Assert.That(results["Faulty service"]["exception"]?.ToString(), Is.EqualTo(exceptionMessage));
+            Assert.That(jsonObject.GetProperty("results").GetProperty("Faulty service").TryGetProperty("exception", out _), Is.False);
         });
 
         reader.Dispose();
@@ -272,12 +234,10 @@ internal sealed class HealthCheckResponseWriterTests
         var reader = new StreamReader(context.Response.Body);
         var jsonResponse = await reader.ReadToEndAsync().ConfigureAwait(false);
 
-        var jsonObject = JObject.Parse(jsonResponse);
-        Assert.That(jsonObject["status"], Is.Not.Null);
-        Assert.That(jsonObject["status"].ToString(), Is.EqualTo("Healthy"));
+        var jsonObject = JsonDocument.Parse(jsonResponse).RootElement;
 
-        var results = jsonObject["results"] as JObject;
-        Assert.That(results, Is.Null);
+        Assert.That(jsonObject.GetProperty("status").GetString(), Is.EqualTo("Healthy"));
+        Assert.That(jsonObject.TryGetProperty("results", out _), Is.False);
 
         reader.Dispose();
     }

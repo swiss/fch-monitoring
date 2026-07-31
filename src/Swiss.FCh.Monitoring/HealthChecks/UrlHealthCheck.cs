@@ -24,17 +24,21 @@ public class UrlHealthCheck : IHealthCheck
             var client = _httpClientFactory.CreateClient(_httpClientName ?? context.Registration.Name);
             var response = await client.GetAsync(_url, cancellationToken).ConfigureAwait(false);
 
-            return response.IsSuccessStatusCode
-                ? HealthCheckResult.Healthy("Endpoint is reachable.")
-                : context.Registration.FailureStatus == HealthStatus.Degraded
+            if (response.IsSuccessStatusCode)
+            {
+                return HealthCheckResult.Healthy("Endpoint is reachable.");
+            }
+
+            return
+                context.Registration.FailureStatus == HealthStatus.Degraded
                     ? HealthCheckResult.Degraded($"Endpoint returned status code ({(int)response.StatusCode}) {response.StatusCode}.")
                     : HealthCheckResult.Unhealthy($"Endpoint returned status code ({(int)response.StatusCode}) {response.StatusCode}.");
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             return context.Registration.FailureStatus == HealthStatus.Degraded
-                ? HealthCheckResult.Degraded("Error connecting to endpoint.", ex)
-                : HealthCheckResult.Unhealthy("Error connecting to endpoint.", ex);
+                ? HealthCheckResult.Degraded("Error connecting to endpoint.")
+                : HealthCheckResult.Unhealthy("Error connecting to endpoint.");
         }
     }
 }
