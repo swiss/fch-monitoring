@@ -33,13 +33,12 @@ public static class HealthCheckResponseWriter
                     {
                         status = entry.Value.Status.ToString(),
                         description = entry.Value.Description,
-                        exception = entry.Value.Exception?.Message,
                         data = entry.Value.Data.Count == 0 ? null : entry.Value.Data
                     }
                 )
         };
 
         var json = JsonSerializer.Serialize(response, _jsonSerializerOptions);
-        await context.Response.WriteAsync(json, Encoding.UTF8).ConfigureAwait(false);
+        await context.Response.WriteAsync(json, Encoding.UTF8, context.RequestAborted).ConfigureAwait(false);
     }
 }

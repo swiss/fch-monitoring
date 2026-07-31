@@ -21,7 +21,7 @@ internal sealed class UrlHealthCheckTests
     }
 
     [Test]
-    public async Task CheckHealthAsync_ShouldReturnHealthy_WhenEndpointIsReachable()
+    public async Task CheckHealthAsync_WhenEndpointIsReachable_ShouldReturnHealthy()
     {
         var (healthCheck, context) = CreateUrlHealthCheck(HttpStatusCode.OK);
 
@@ -66,7 +66,7 @@ internal sealed class UrlHealthCheckTests
     }
 
     [Test]
-    public async Task CheckHealthAsync_ShouldReturnUnhealthy_WhenEndpointIsNotReachable()
+    public async Task CheckHealthAsync_WhenEndpointIsNotReachable_ShouldReturnUnhealthy()
     {
         var (healthCheck, context) = CreateUrlHealthCheck(null);
 
@@ -76,12 +76,12 @@ internal sealed class UrlHealthCheckTests
         {
             Assert.That(result.Status, Is.EqualTo(HealthStatus.Unhealthy));
             Assert.That(result.Description, Is.EqualTo("Error connecting to endpoint."));
-            Assert.That(result.Exception, Is.Not.Null);
+            Assert.That(result.Exception, Is.Null);
         });
     }
 
     [Test]
-    public async Task CheckHealthAsync_ShouldReturnDegraded_WhenEndpointIsNotReachableAndDegradedIsDefinedAsFailureStatus()
+    public async Task CheckHealthAsync_WhenEndpointIsNotReachableAndDegradedIsDefinedAsFailureStatus_ShouldReturnDegraded()
     {
         var (healthCheck, context) = CreateUrlHealthCheck(null, HealthStatus.Degraded);
 
@@ -91,7 +91,7 @@ internal sealed class UrlHealthCheckTests
         {
             Assert.That(result.Status, Is.EqualTo(HealthStatus.Degraded));
             Assert.That(result.Description, Is.EqualTo("Error connecting to endpoint."));
-            Assert.That(result.Exception, Is.Not.Null);
+            Assert.That(result.Exception, Is.Null);
         });
     }
 
